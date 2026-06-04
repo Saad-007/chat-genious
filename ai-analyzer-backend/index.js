@@ -5,20 +5,22 @@ const { OpenAI } = require('openai');
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Base64 images heavy hoti hain
+// 🔴 1. CORS aur Body Parser Setup (Optimized for Render)
+app.use(cors()); // App se cross-origin requests allow karne ke liye
+app.use(express.json({ limit: '50mb' })); // Base64 images ke liye zaroori
+app.use(express.urlencoded({ limit: '50mb', extended: true })); // Extra safety for heavy payloads
 
-// OpenAI Setup
+// 🔴 2. OpenAI Setup (API Key ab Render ke environment variable se aayegi)
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Test Route (Check karne ke liye ke server chal raha hai)
+// 🔴 3. Health Check Route (Render continuously checks this route to keep the server awake)
 app.get('/', (req, res) => {
-    res.send("Social Genius AI Backend is Running! 🚀");
+    res.status(200).send("Social Genius AI Backend is Live on Render! 🚀");
 });
 
+// 🔴 Main AI Analysis Route
 app.post('/api/analyze-chat', async (req, res) => {
     try {
         const { imageBase64, userMessage, context, tag } = req.body;
@@ -116,12 +118,19 @@ Respond in this EXACT JSON format (pure JSON, no markdown, no extra text):
 
     } catch (error) {
         console.error("AI Analysis Error:", error);
-        res.status(500).json({ success: false, error: "Failed to analyze message" });
+        res.status(500).json({ success: false, error: "Failed to analyze message. Please check the server logs." });
     }
 });
 
-// Start Server
+// 🔴 4. Global Error Handler (Agar koi request fail ho toh pura server crash na ho)
+app.use((err, req, res, next) => {
+    console.error("Global Error Caught:", err.stack);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
+});
+
+// 🔴 5. Dynamic Port Binding for Render
+// Render apna PORT khud assign karta hai (process.env.PORT ke zariye)
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server is successfully running on port ${PORT}`);
 });
