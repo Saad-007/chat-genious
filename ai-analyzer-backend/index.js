@@ -87,10 +87,23 @@ Respond in this EXACT JSON format (pure JSON, no markdown, no extra text):
     "[Second brutal truth tearing apart their emotional control]",
     "[Third brutal truth]"
   ],
+  "CRITICAL_INSTRUCTION_FOR_REPLIES": "You MUST generate EXACTLY 3 different variations for EACH of these 5 tones: 'Calm', 'High-Value', 'Charismatic', 'Playful', and 'Respected'. Your 'replies' array MUST contain exactly 15 objects in total.",
   "replies": [
-    { "tone": "Unbothered", "message": "[High-value, low-effort Gen Z alternative]", "explanation": "[Why this saves their dignity and shifts the power balance]" },
-    { "tone": "Toxic", "message": "[Slightly toxic/playful alternative to shift power]", "explanation": "[Why this reverses the dynamic]" },
-    { "tone": "Silence", "message": "Literally do nothing.", "explanation": "[Why leaving it on read is the strongest move here]" }
+    { "tone": "Calm", "message": "[Option 1: A calm, unreactive reply]", "explanation": "[Why it works]" },
+    { "tone": "Calm", "message": "[Option 2: A slightly different calm reply]", "explanation": "[Why it works]" },
+    { "tone": "Calm", "message": "[Option 3: Another calm variation]", "explanation": "[Why it works]" },
+    { "tone": "High-Value", "message": "[Option 1: Shows self-respect and boundaries]", "explanation": "[Why it works]" },
+    { "tone": "High-Value", "message": "[Option 2: Unbothered high-value text]", "explanation": "[Why it works]" },
+    { "tone": "High-Value", "message": "[Option 3: Powerful boundary setting]", "explanation": "[Why it works]" },
+    { "tone": "Charismatic", "message": "[Option 1: Charming and confident]", "explanation": "[Why it works]" },
+    { "tone": "Charismatic", "message": "[Option 2: Witty and smooth]", "explanation": "[Why it works]" },
+    { "tone": "Charismatic", "message": "[Option 3: Socially dominant yet polite]", "explanation": "[Why it works]" },
+    { "tone": "Playful", "message": "[Option 1: Flirty and lighthearted]", "explanation": "[Why it works]" },
+    { "tone": "Playful", "message": "[Option 2: Teasing response]", "explanation": "[Why it works]" },
+    { "tone": "Playful", "message": "[Option 3: Fun and unpredictable]", "explanation": "[Why it works]" },
+    { "tone": "Respected", "message": "[Option 1: Mature and firm]", "explanation": "[Why it works]" },
+    { "tone": "Respected", "message": "[Option 2: Polite but distant]", "explanation": "[Why it works]" },
+    { "tone": "Respected", "message": "[Option 3: Professional/Clean boundary]", "explanation": "[Why it works]" }
   ]
 }`;
 
@@ -98,7 +111,7 @@ Respond in this EXACT JSON format (pure JSON, no markdown, no extra text):
             model: "gpt-4o",
             response_format: { type: "json_object" },
             temperature: 0.95, // Maxed out creativity for unhinged personality
-            max_tokens: 1500, 
+            max_tokens: 3000, // 🔴 Increased tokens so the 15 replies don't get cut off halfway
             messages: [
                 { role: "system", content: systemPrompt },
                 {
