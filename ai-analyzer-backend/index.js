@@ -25,10 +25,7 @@ app.post('/api/analyze-chat', async (req, res) => {
     try {
         const { imageBase64, userMessage, context, tag } = req.body;
 
-        if (!imageBase64) {
-            return res.status(400).json({ success: false, error: "Screenshot is required for context" });
-        }
-
+        // 🔴 FIX 1: Screenshot ki requirement hata di hai. Ab sirf message lazmi hai.
         if (!userMessage) {
             return res.status(400).json({ success: false, error: "Drafted message is required to evaluate" });
         }
@@ -52,7 +49,7 @@ WHAT YOU MUST NEVER DO (FORBIDDEN):
 
 YOUR MAIN JOB (SOCIAL INTELLIGENCE):
 - Expose hidden social signals. Do not correct grammar.
-- Analyze the chat screenshot ONLY to read the room and judge the power dynamic (Who is chasing? Who is pulling back? Is there desperation or tension?).
+- Analyze the chat screenshot (if provided) to read the room and judge the power dynamic.
 - Evaluate the drafted text message based on this vibe.
 - If the text is desperate/weak: Roast them brutally.
 - If the text is a high-value power move: Hype them up, but keep your edgy, unhinged tone.
@@ -60,7 +57,7 @@ YOUR MAIN JOB (SOCIAL INTELLIGENCE):
 Respond in this EXACT JSON format (pure JSON, no markdown, no extra text):
 {
   "extracted_message": "[Insert the user's drafted message here]",
-  "situation_read": "[2-3 sentence brutal Vibe Check of the chat history from the screenshot. Expose the hidden social signals. Who is chasing?]",
+  "situation_read": "[2-3 sentence brutal Vibe Check of the situation. Expose the hidden social signals. Who is chasing?]",
   "analysis_reason": "[Painfully detailed, long-winded explanation of why sending this drafted text is a massive L or a huge W. Expose their emotional behavior and validation seeking.]",
   "verdict": {
     "main": "[Short punchy Gen Z slang: e.g., Cooked. / Massive Ick. / W Rizz. / Absolute Cinema.]",
@@ -87,42 +84,54 @@ Respond in this EXACT JSON format (pure JSON, no markdown, no extra text):
     "[Second brutal truth tearing apart their emotional control]",
     "[Third brutal truth]"
   ],
-  "CRITICAL_INSTRUCTION_FOR_REPLIES": "You MUST generate EXACTLY 3 different variations for EACH of these 5 tones: 'Calm', 'High-Value', 'Charismatic', 'Playful', and 'Respected'. Your 'replies' array MUST contain exactly 15 objects in total.",
+  "CRITICAL_INSTRUCTION_FOR_REPLIES": "You MUST generate EXACTLY 3 different variations for EACH of these 5 tones: 'Calm', 'High-Value', 'Charismatic', 'Playful', and 'Respected'. CRITICAL RULE: These replies MUST be direct UPGRADED ALTERNATIVES to the user's drafted message. Keep their core intent, but rewrite it into these specific tones. Do NOT write generic replies.",
   "replies": [
-    { "tone": "Calm", "message": "[Option 1: A calm, unreactive reply]", "explanation": "[Why it works]" },
-    { "tone": "Calm", "message": "[Option 2: A slightly different calm reply]", "explanation": "[Why it works]" },
-    { "tone": "Calm", "message": "[Option 3: Another calm variation]", "explanation": "[Why it works]" },
-    { "tone": "High-Value", "message": "[Option 1: Shows self-respect and boundaries]", "explanation": "[Why it works]" },
-    { "tone": "High-Value", "message": "[Option 2: Unbothered high-value text]", "explanation": "[Why it works]" },
-    { "tone": "High-Value", "message": "[Option 3: Powerful boundary setting]", "explanation": "[Why it works]" },
-    { "tone": "Charismatic", "message": "[Option 1: Charming and confident]", "explanation": "[Why it works]" },
-    { "tone": "Charismatic", "message": "[Option 2: Witty and smooth]", "explanation": "[Why it works]" },
-    { "tone": "Charismatic", "message": "[Option 3: Socially dominant yet polite]", "explanation": "[Why it works]" },
-    { "tone": "Playful", "message": "[Option 1: Flirty and lighthearted]", "explanation": "[Why it works]" },
-    { "tone": "Playful", "message": "[Option 2: Teasing response]", "explanation": "[Why it works]" },
-    { "tone": "Playful", "message": "[Option 3: Fun and unpredictable]", "explanation": "[Why it works]" },
-    { "tone": "Respected", "message": "[Option 1: Mature and firm]", "explanation": "[Why it works]" },
-    { "tone": "Respected", "message": "[Option 2: Polite but distant]", "explanation": "[Why it works]" },
-    { "tone": "Respected", "message": "[Option 3: Professional/Clean boundary]", "explanation": "[Why it works]" }
+    { "tone": "Calm", "message": "[Alternative 1: Keep their intent but make it unreactive]", "explanation": "[Why it works better than their draft]" },
+    { "tone": "Calm", "message": "[Alternative 2: A slightly different calm version]", "explanation": "[Why it works better]" },
+    { "tone": "Calm", "message": "[Alternative 3: Another calm variation]", "explanation": "[Why it works better]" },
+    { "tone": "High-Value", "message": "[Alternative 1: Keep intent but show boundaries/self-respect]", "explanation": "[Why it works better]" },
+    { "tone": "High-Value", "message": "[Alternative 2: Unbothered high-value version]", "explanation": "[Why it works better]" },
+    { "tone": "High-Value", "message": "[Alternative 3: Powerful boundary setting version]", "explanation": "[Why it works better]" },
+    { "tone": "Charismatic", "message": "[Alternative 1: Keep intent but make it charming]", "explanation": "[Why it works better]" },
+    { "tone": "Charismatic", "message": "[Alternative 2: Witty and smooth version]", "explanation": "[Why it works better]" },
+    { "tone": "Charismatic", "message": "[Alternative 3: Socially dominant yet polite version]", "explanation": "[Why it works better]" },
+    { "tone": "Playful", "message": "[Alternative 1: Flirty/lighthearted version of their intent]", "explanation": "[Why it works better]" },
+    { "tone": "Playful", "message": "[Alternative 2: Teasing version]", "explanation": "[Why it works better]" },
+    { "tone": "Playful", "message": "[Alternative 3: Fun and unpredictable version]", "explanation": "[Why it works better]" },
+    { "tone": "Respected", "message": "[Alternative 1: Mature and firm version of their intent]", "explanation": "[Why it works better]" },
+    { "tone": "Respected", "message": "[Alternative 2: Polite but distant version]", "explanation": "[Why it works better]" },
+    { "tone": "Respected", "message": "[Alternative 3: Professional/Clean boundary version]", "explanation": "[Why it works better]" }
   ]
 }`;
+
+        // 🔴 FIX 2: Dynamic User Content Array. Agar image hai toh daalo, warna sirf text.
+        let userContent = [
+            { 
+                type: "text", 
+                text: imageBase64 
+                  ? `Here is the chat history screenshot to read the room. Context: ${context || 'None'}. Tag: ${tag || 'None'}. Based ONLY on the vibe and power dynamic in this screenshot, EVALUATE this drafted text I am thinking of sending: "${userMessage}". Provide better alternatives as requested.`
+                  : `I don't have a screenshot to show you, but here is the situation. Context: ${context || 'None'}. Tag: ${tag || 'None'}. EVALUATE this drafted text I am thinking of sending: "${userMessage}". Provide better alternatives as requested.`
+            }
+        ];
+
+        // Agar user ne screenshot diya hai, toh hi OpenAI ki array mein image push hogi
+        if (imageBase64) {
+            userContent.push({
+                type: "image_url",
+                image_url: { url: `data:image/jpeg;base64,${imageBase64}` }
+            });
+        }
 
         const response = await openai.chat.completions.create({
             model: "gpt-4o",
             response_format: { type: "json_object" },
-            temperature: 0.95, // Maxed out creativity for unhinged personality
-            max_tokens: 3000, // 🔴 Increased tokens so the 15 replies don't get cut off halfway
+            temperature: 0.95, 
+            max_tokens: 3000, 
             messages: [
                 { role: "system", content: systemPrompt },
                 {
                     role: "user",
-                    content: [
-                        { 
-                            type: "text", 
-                            text: `Here is the chat history screenshot to read the room. Based ONLY on the vibe and power dynamic in this screenshot, EVALUATE this drafted text I am thinking of sending: "${userMessage}". Remember your core personality rules: Be brutal, sarcastic, and never sound like a corporate AI.` 
-                        },
-                        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } }
-                    ]
+                    content: userContent // 🔴 Dynamic array pass ki hai
                 }
             ],
         });
