@@ -123,7 +123,7 @@ Respond in this EXACT JSON format (pure JSON, no markdown, no extra text):
         }
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o-mini",
             response_format: { type: "json_object" },
             temperature: 0.95, 
             max_tokens: 3000, 
