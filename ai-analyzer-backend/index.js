@@ -6,9 +6,9 @@ const { OpenAI } = require('openai');
 const app = express();
 
 // 🔴 1. CORS aur Body Parser Setup
-app.use(cors()); 
-app.use(express.json({ limit: '50mb' })); 
-app.use(express.urlencoded({ limit: '50mb', extended: true })); 
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // 🔴 2. OpenAI Setup 
 const openai = new OpenAI({
@@ -86,11 +86,11 @@ Respond in this EXACT JSON format (pure JSON, no markdown):
 }`;
 
         let userContent = [
-            { 
-                type: "text", 
-                text: imageBase64 
-                  ? `Here is the chat history screenshot to read the room. Context: ${context || 'None'}. Tag: ${tag || 'None'}. Based ONLY on the vibe and power dynamic in this screenshot, EVALUATE this drafted text I am thinking of sending: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide better alternatives as requested.`
-                  : `I don't have a screenshot to show you, but here is the situation. Context: ${context || 'None'}. Tag: ${tag || 'None'}. EVALUATE this drafted text I am thinking of sending: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide better alternatives as requested.`
+            {
+                type: "text",
+                text: imageBase64
+                    ? `Here is the chat history screenshot to read the room. Context: ${context || 'None'}. Tag: ${tag || 'None'}. Based ONLY on the vibe and power dynamic in this screenshot, EVALUATE this drafted text I am thinking of sending: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide better alternatives as requested.`
+                    : `I don't have a screenshot to show you, but here is the situation. Context: ${context || 'None'}. Tag: ${tag || 'None'}. EVALUATE this drafted text I am thinking of sending: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide better alternatives as requested.`
             }
         ];
 
@@ -104,13 +104,13 @@ Respond in this EXACT JSON format (pure JSON, no markdown):
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             response_format: { type: "json_object" },
-            temperature: 0.95, 
-            max_tokens: 3000, 
+            temperature: 0.95,
+            max_tokens: 3000,
             messages: [
                 { role: "system", content: systemPrompt },
                 {
                     role: "user",
-                    content: userContent 
+                    content: userContent
                 }
             ],
         });
@@ -125,6 +125,74 @@ Respond in this EXACT JSON format (pure JSON, no markdown):
     }
 });
 
+// 🔴 NEW: Coach AI Chat Route
+app.post('/api/coach-chat', async (req, res) => {
+    try {
+        // Frontend se user ki nayi chat aur pichli history aayegi
+        const { messages } = req.body;
+
+        if (!messages || messages.length === 0) {
+            return res.status(400).json({ success: false, error: "Chat history is required" });
+        }
+
+        console.log("Generating Coach response...");
+
+        // Yahan aap apna Coach wala Mega Document text paste karenge
+        const coachSystemPrompt = `You are SocialGenius Coach.
+You are the user's brutally honest, socially intelligent friend. Your job is not to tell the user what they want to hear. Your job is to help them understand what is actually happening and make the smartest next move.
+You are emotionally stable, perceptive, direct, clever, and occasionally funny or savage.
+
+CORE RULES:
+1. Never manufacture problems to sound insightful. If something is fine, say it's fine. If the user is overthinking, tell them.
+2. Separate facts from assumptions. Distinguish what the user knows from what they are interpreting.
+3. Pay attention to timing, patterns, conversational context, previous behavior, emotional state, subtext, and social dynamics.
+4. Do not blindly validate the user's interpretation. Do not blindly contradict it either. Your loyalty is to reality.
+5. Acknowledge the emotion without allowing the emotion to dictate the advice.
+6. Do not act like a therapist. Do not use generic motivational language. Do not give corporate-sounding advice. Speak naturally.
+7. Be concise by default. Give the user clarity rather than essays.
+8. Humor and roasting are allowed when they make the advice clearer or more human, but never at the expense of accuracy, dignity, or emotional safety. Brutal does not mean cruel.
+
+SIGNATURE VOCABULARY & TONE (Use naturally, do not overuse):
+- Slow down.
+- Let's separate the facts from the story.
+- You're spiraling.
+- You're overthinking this.
+- That's not actually what the evidence says.
+- I don't buy that.
+- You're chasing.
+- Leave it alone.
+- Don't make this bigger than it is.
+- Put the phone down. 😭
+- You already said enough.
+- Let them come to you.
+
+ACTIONABLE OUTPUT:
+When appropriate, clearly tell them: 
+SEND IT. / DON'T SEND IT. / WAIT. / LEAVE IT ALONE. / YOU'RE OVERTHINKING THIS. / YOU'RE CHASING. / YOU HANDLED THAT WELL. / I NEED MORE CONTEXT.
+
+CRITICAL SAFETY BOUNDARY:
+If someone is expressing serious self-harm/suicidal intent or immediate danger, immediately drop the savage/social-advice personality. No roasting. No cleverness. Your response must become calm, compassionate, direct, and focused on getting the person immediate real-world support.`;
+
+        // OpenAI API Call
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o", // Coach ke complex logic ke liye GPT-4o best rahega
+            temperature: 0.8, // Thori natural aur human tone ke liye
+            messages: [
+                { role: "system", content: coachSystemPrompt },
+                ...messages // Frontend se aane wala array yahan destructure hoga
+            ],
+        });
+
+        const coachReply = response.choices[0].message.content;
+        console.log("✅ Coach Response Generated!");
+
+        res.json({ success: true, reply: coachReply });
+
+    } catch (error) {
+        console.error("Coach Chat Error:", error);
+        res.status(500).json({ success: false, error: "Failed to load Coach response. Please try again." });
+    }
+});
 // 🔴 4. Global Error Handler
 app.use((err, req, res, next) => {
     console.error("Global Error Caught:", err.stack);
