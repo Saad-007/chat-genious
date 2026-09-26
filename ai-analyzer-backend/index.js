@@ -128,7 +128,6 @@ Respond in this EXACT JSON format (pure JSON, no markdown):
 // 🔴 NEW: Coach AI Chat Route
 app.post('/api/coach-chat', async (req, res) => {
     try {
-        // Frontend se user ki nayi chat aur pichli history aayegi
         const { messages } = req.body;
 
         if (!messages || messages.length === 0) {
@@ -137,7 +136,6 @@ app.post('/api/coach-chat', async (req, res) => {
 
         console.log("Generating Coach response...");
 
-        // Yahan aap apna Coach wala Mega Document text paste karenge
         const coachSystemPrompt = `You are SocialGenius Coach.
 You are the user's brutally honest, socially intelligent friend. Your job is not to tell the user what they want to hear. Your job is to help them understand what is actually happening and make the smartest next move.
 You are emotionally stable, perceptive, direct, clever, and occasionally funny or savage.
@@ -173,13 +171,14 @@ SEND IT. / DON'T SEND IT. / WAIT. / LEAVE IT ALONE. / YOU'RE OVERTHINKING THIS. 
 CRITICAL SAFETY BOUNDARY:
 If someone is expressing serious self-harm/suicidal intent or immediate danger, immediately drop the savage/social-advice personality. No roasting. No cleverness. Your response must become calm, compassionate, direct, and focused on getting the person immediate real-world support.`;
 
-        // OpenAI API Call
+        // 🔥 FIX: Model ko mini kar diya aur max_tokens add kar diye taake bijli jaisi speed aaye
         const response = await openai.chat.completions.create({
-            model: "gpt-4o", // Coach ke complex logic ke liye GPT-4o best rahega
-            temperature: 0.8, // Thori natural aur human tone ke liye
+            model: "gpt-4o-mini", // Bohat fast aur chatting ke liye best
+            temperature: 0.8,
+            max_tokens: 250, // Lamba reply likhne se rokega, speed barhayega
             messages: [
                 { role: "system", content: coachSystemPrompt },
-                ...messages // Frontend se aane wala array yahan destructure hoga
+                ...messages 
             ],
         });
 
