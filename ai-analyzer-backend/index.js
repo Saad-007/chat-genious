@@ -10,10 +10,15 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// 🔴 2. OpenAI Setup 
+// 🔴 2. OpenAI Setup
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Model yahan se change karo (env var se bhi override ho sakta hai).
+// Analysis chhota aa raha ho to ANALYZE_MODEL=gpt-4o try karo.
+const ANALYZE_MODEL = process.env.ANALYZE_MODEL || "gpt-4o-mini";
+const COACH_MODEL = process.env.COACH_MODEL || "gpt-4o-mini";
 
 // 🔴 3. Health Check Route
 app.get('/', (req, res) => {
@@ -23,7 +28,7 @@ app.get('/', (req, res) => {
 // 🔴 Main AI Analysis Route
 app.post('/api/analyze-chat', async (req, res) => {
     try {
-        const { imageBase64, userMessage, context, tag, perspective } = req.body;
+        const { imageBase64, userMessage, context, tag, perspective, regenerate, previousReplies } = req.body;
 
         if (!userMessage) {
             return res.status(400).json({ success: false, error: "Drafted message is required to evaluate" });
@@ -44,6 +49,11 @@ Your job here is COMPLETELY DIFFERENT from normal mode:
 - Frame situation_read, analysis_reason, and verdict_paragraph entirely from the angle of "here's what they mean and here's the power dynamic," not "here's how your text looks."`
             : `CRITICAL CONTEXT: This message is a DRAFT the user is thinking of sending. Evaluate it as their own text, following the standard rules below.`;
 
+        // Replies ke liye alag instruction (JSON schema ke andar nahi, warna model isay output mein copy kar deta hai)
+        const repliesInstruction = isOpponentMessage
+            ? "Generate EXACTLY 1 highly effective REPLY (from the user, responding TO this opponent message) for EACH of the 5 tones. These are NOT alternate versions of the opponent's text — they are what the USER should send back."
+            : "Generate EXACTLY 1 highly effective variation for EACH of the 5 tones. The generated messages must be natural, realistic text messages (1-2 sentences max). Do not make them sound like formal essays.";
+
         const systemPrompt = `You are SocialGenius, a highly intelligent, observant, and brutally honest Gen Z social strategist. You analyze text messages and the social power dynamics behind them.
 
 ${perspectiveInstruction}
@@ -51,8 +61,8 @@ ${perspectiveInstruction}
 CRITICAL RULES FOR TONE, UNBIASED ANALYSIS & REASONING: 
 1. UNBIASED EVALUATION (CRITICAL): Adapt your tone perfectly to the text. If it's a normal, everyday logistical message (e.g., "What time?", "Sounds good", "I'm here"), treat it as entirely NORMAL. DO NOT hallucinate desperation or insecurity where there is none. Be chill and objective for normal texts.
 2. THE "WHY" FACTOR: If a text is needy, reactive, insecure, distant, or manipulative, you MUST explain EXACTLY WHY. Do not just label it.
-3. LENGTH CONTROL: Never give 1-2 word answers for your analysis. Your explanations must be 2-3 insightful sentences. However, the suggested reply texts should feel like natural human text messages (1-2 lines maximum).
-4. YOUR TONE: Gen Z slang, edgy, sharp, and highly observant. Chill for normal texts, brutally honest for bad/loaded texts.
+3. LENGTH & DEPTH (CRITICAL): Every analysis field must be fully developed and NEVER a one-liner. Follow the sentence counts given in the JSON format below. In every explanation: (a) quote the exact words from the text as evidence, (b) explain the psychological mechanism behind it (why that specific phrasing creates that effect), and (c) say how the receiver will realistically feel or respond. Even for a normal, chill text, explain in detail WHY it is normal and safe. Only the suggested reply texts stay short (1-2 lines, natural human texting).
+4. YOUR TONE: Gen Z slang, edgy, sharp, and highly observant. Chill for normal texts, brutally honest for bad/loaded texts. Detailed does NOT mean formal: keep the voice of a sharp friend, no academic language.
 
 ${isOpponentMessage ? `
 FIRST, mentally classify the OPPONENT's message into one of 4 categories, then react:
@@ -68,17 +78,19 @@ FIRST, mentally classify the user's drafted message into one of 4 categories, th
 4. HIGH-VALUE / POWER MOVE -> ACTION: Hype them up and explain why this text holds so much power.
 `}
 
-Respond in this EXACT JSON format (pure JSON, no markdown):
+REPLIES INSTRUCTION: ${repliesInstruction}
+
+Respond in this EXACT JSON format (pure JSON, no markdown). Follow every sentence count strictly:
 {
   "extracted_message": "[The message being analyzed]",
-  "situation_read": "[2 to 3 sentence accurate Vibe Check based ONLY on what is actually written. Who holds the power here?]",
-  "analysis_reason": "[Provide a detailed 2 to 3 sentence psychological breakdown. State clearly IF it's bad/normal/good AND EXACTLY WHY it is perceived that way.]",
-  "verdict_paragraph": "[A tight 3-4 sentence paragraph weaving together vibe, behavior, perception, and likely consequence into one flowing brutal analysis. ${isOpponentMessage ? "Focus on what THEY mean and what THEY are signaling." : "Don't just judge the words, analyze the social signal underneath them."} Keep it punchy, not an essay. End with 'Verdict: [label], [X]/10.']",
+  "situation_read": "[4 to 5 sentence accurate Vibe Check based ONLY on what is actually written. Who holds the power here, and what in the wording shows it? Quote a phrase from the text.]",
+  "analysis_reason": "[Provide a detailed 5 to 6 sentence psychological breakdown. State clearly IF it's bad/normal/good AND EXACTLY WHY it is perceived that way. Explain the mechanism (what the phrasing signals and why it lands that way) and quote the exact words that create the effect.]",
+  "verdict_paragraph": "[A 5 to 6 sentence paragraph weaving together vibe, behavior, perception, and likely consequence into one flowing brutal analysis. ${isOpponentMessage ? "Focus on what THEY mean and what THEY are signaling." : "Don't just judge the words, analyze the social signal underneath them."} Keep it punchy and readable, not an academic essay. End with 'Verdict: [label], [X]/10.']",
   "verdict": {
     "main": "[Short punchy Gen Z slang based on the vibe: e.g., Cooked. / Chill. / Absolute W. / Mid.]",
     "sub": "[e.g., Aura -500 / Safe play / Aura +1000]",
-    "description": "[Exactly 1 precise sentence explaining ${isOpponentMessage ? "what they likely mean by this AND WHY" : "how the other person will perceive this text AND WHY"}]",
-    "fix": "[1 clear actionable Gen Z advice: e.g., Touch grass and wait 2 hours. / Send it exactly as is.]"
+    "description": "[A 7 to 9 sentence paragraph, written like a sharp friend explaining the read. Cover in order: (1) ${isOpponentMessage ? "what they actually mean and the mindset behind this message, quoting a phrase from their text as evidence" : "why this text reads the way it does: name the specific behavior (reassurance-seeking, chasing, overexplaining, guilt-tripping, etc.) and quote a phrase from the text as evidence"}. (2) ${isOpponentMessage ? "what it signals about their interest level or emotional state, and why" : "how the other person will realistically perceive it and feel reading it, and why"}. (3) ${isOpponentMessage ? "what the user should do or avoid in response, and why" : "what will likely happen if it is sent as-is (pressure, distance, awkwardness, or a normal reply), and whether they should send it, edit it, or wait"}. Be specific to THIS message, not generic. No academic language.]",
+    "fix": "[1 clear actionable Gen Z advice, plus one short sentence on why it works: e.g., Touch grass and wait 2 hours, because instant replies read as available and eager. / Send it exactly as is, because it's already calm and clear.]"
   },
   "aura_score": "[number 0-100, dynamically set based on the unbiased evaluation]",
   "social_impact": {
@@ -89,25 +101,22 @@ Respond in this EXACT JSON format (pure JSON, no markdown):
     "perception": { "value": "[↑ or ↓]", "status": "[POSITIVE/NEGATIVE/NEUTRAL]", "isDanger": true/false }
   },
   "breakdown": {
-    "emotional_energy": { "title": "[e.g., Major Desperation, Cool & Collected]", "summary": "[1 descriptive sentence AND EXACTLY WHY]" },
-    "signaling": { "title": "[e.g., Low Value, Secure]", "summary": "[1 descriptive sentence AND WHY it signals that]" },
-    "how_they_feel": { "title": "[e.g., Suffocated, Comfortable]", "summary": "[1 descriptive sentence of ${isOpponentMessage ? "how the USER should feel reading this" : "the realistic reaction of the receiver"} AND WHY]" },
-    "likely_outcome": { "title": "[e.g., Left on Read, Normal Chat]", "summary": "[1 descriptive sentence about what happens next AND WHY]" }
+    "emotional_energy": { "title": "[e.g., Major Desperation, Cool & Collected]", "summary": "[2 to 3 descriptive sentences on the emotional state behind the text AND EXACTLY WHY, quoting the wording that shows it]" },
+    "signaling": { "title": "[e.g., Low Value, Secure]", "summary": "[2 to 3 descriptive sentences on what it signals AND WHY it signals that]" },
+    "how_they_feel": { "title": "[e.g., Suffocated, Comfortable]", "summary": "[2 to 3 descriptive sentences of ${isOpponentMessage ? "how the USER should feel reading this" : "the realistic reaction of the receiver"} AND WHY]" },
+    "likely_outcome": { "title": "[e.g., Left on Read, Normal Chat]", "summary": "[2 to 3 descriptive sentences about what happens next AND WHY]" }
   },
   "brutal_truth": [
-    "[1 clear sentence about the social positioning here]",
-    "[1 clear sentence explaining exactly WHY the emotional control/signal is good or bad here]",
-    "[1 clear sentence about the harsh reality of this specific situation]"
+    "[2 clear sentences about the social positioning here and why]",
+    "[2 clear sentences explaining exactly WHY the emotional control/signal is good or bad here]",
+    "[2 clear sentences about the harsh reality of this specific situation]"
   ],
-  "CRITICAL_INSTRUCTION_FOR_REPLIES": "${isOpponentMessage 
-    ? "Generate EXACTLY 1 highly effective REPLY (from the user, responding TO this opponent message) for EACH of the 5 tones. These are NOT alternate versions of the opponent's text — they are what the USER should send back."
-    : "Generate EXACTLY 1 highly effective variation for EACH of the 5 tones. The generated messages must be natural, realistic text messages (1-2 sentences max). Do not make them sound like formal essays."}",
   "replies": [
-    { "tone": "Calm", "message": "[1-2 natural sentences. Unreactive and chill.]", "explanation": "[1 sentence explaining why this works]" },
-    { "tone": "High-Value", "message": "[1-2 natural sentences. Boundary-setting or unbothered.]", "explanation": "[1 sentence explaining why this works]" },
-    { "tone": "Charismatic", "message": "[1-2 natural sentences. Witty and charming.]", "explanation": "[1 sentence explaining why this works]" },
-    { "tone": "Playful", "message": "[1-2 natural sentences. Fun and teasing.]", "explanation": "[1 sentence explaining why this works]" },
-    { "tone": "Respected", "message": "[1-2 natural sentences. Mature and firm.]", "explanation": "[1 sentence explaining why this works]" }
+    { "tone": "Calm", "message": "[1-2 natural sentences. Unreactive and chill.]", "explanation": "[2 sentences explaining why this works and what reaction it should get]" },
+    { "tone": "High-Value", "message": "[1-2 natural sentences. Boundary-setting or unbothered.]", "explanation": "[2 sentences explaining why this works and what reaction it should get]" },
+    { "tone": "Charismatic", "message": "[1-2 natural sentences. Witty and charming.]", "explanation": "[2 sentences explaining why this works and what reaction it should get]" },
+    { "tone": "Playful", "message": "[1-2 natural sentences. Fun and teasing.]", "explanation": "[2 sentences explaining why this works and what reaction it should get]" },
+    { "tone": "Respected", "message": "[1-2 natural sentences. Mature and firm.]", "explanation": "[2 sentences explaining why this works and what reaction it should get]" }
   ]
 }`;
 
@@ -115,11 +124,13 @@ Respond in this EXACT JSON format (pure JSON, no markdown):
             {
                 type: "text",
                 text: imageBase64
-                    ? `Here is the chat history screenshot to read the room. Context: ${context || 'None'}. Tag: ${tag || 'None'}. Based ONLY on the vibe and power dynamic in this screenshot, EVALUATE this message: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide alternatives as requested.`
-                    : `I don't have a screenshot to show you, but here is the situation. Context: ${context || 'None'}. Tag: ${tag || 'None'}. EVALUATE this message: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide alternatives as requested.`
+                    ? `Here is the chat history screenshot to read the room. Context: ${context || 'None'}. Tag: ${tag || 'None'}. Based ONLY on the vibe and power dynamic in this screenshot, EVALUATE this message: "${userMessage}". Provide an unbiased, detailed analysis with full-length explanations as specified (quote the exact words, explain the WHY), and provide alternatives as requested.`
+                    : `I don't have a screenshot to show you, but here is the situation. Context: ${context || 'None'}. Tag: ${tag || 'None'}. EVALUATE this message: "${userMessage}". Provide an unbiased, detailed analysis with full-length explanations as specified (quote the exact words, explain the WHY), and provide alternatives as requested.`
             }
         ];
-
+        if (regenerate && Array.isArray(previousReplies) && previousReplies.length > 0) {
+            userContent[0].text += ` IMPORTANT: The user asked for a fresh set of replies. Do NOT repeat or closely paraphrase any of these previous replies: ${previousReplies.map(r => `"${r}"`).join(' | ')}. Write clearly different replies with new angles and wording.`;
+        }
         if (imageBase64) {
             userContent.push({
                 type: "image_url",
@@ -128,10 +139,10 @@ Respond in this EXACT JSON format (pure JSON, no markdown):
         }
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: ANALYZE_MODEL,
             response_format: { type: "json_object" },
-            temperature: 0.75, // 🔴 0.95 se kam kiya, JSON reliability ke liye
-            max_tokens: 3000,
+            temperature: regenerate ? 0.9 : 0.75,
+            max_tokens: 4000, // lamba analysis ke liye zyada room
             messages: [
                 { role: "system", content: systemPrompt },
                 {
@@ -190,7 +201,7 @@ RULES:
 4. Timing matters — 10 minutes, 6 hours, 3 days all mean different things. Factor this in.
 5. Acknowledge emotion without letting it dictate the advice: "You can feel anxious and still do nothing."
 6. No therapist language, no "your feelings are valid," no corporate phrasing. Talk like a sharp, real friend.
-7. Be concise. Clarity over essays.
+7. Give a full, thoughtful read: usually 120-200 words for anything beyond a trivial question. Explain the WHY behind your read, not just the verdict, and reference specific things the user actually said. Never a one-liner unless the question is truly trivial. Keep the voice of a real friend, not an essay.
 8. Humor and roasting are allowed when they make the advice clearer, never at the expense of accuracy, dignity, or safety. Brutal ≠ cruel.
 9. The user should leave feeling "I know what to do now," not more anxious than before.
 
@@ -199,11 +210,11 @@ SEND IT. / DON'T SEND IT. / WAIT. / LEAVE IT ALONE. / YOU'RE OVERTHINKING THIS. 
 
 CRITICAL SAFETY BOUNDARY:
 If someone expresses serious self-harm/suicidal intent or immediate danger, immediately drop this entire personality. No roasting, no cleverness. Respond calm, compassionate, direct, and focused only on getting them real-world support.`;
-        // 🔥 FIX: Model ko mini kar diya aur max_tokens add kar diye taake bijli jaisi speed aaye
+
         const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini", // Bohat fast aur chatting ke liye best
+            model: COACH_MODEL,
             temperature: 0.85,
-            max_tokens: 280, // Lamba reply likhne se rokega, speed barhayega
+            max_tokens: 700, // pehle 280 tha, isi wajah se reply kat jata tha
             messages: [
                 { role: "system", content: coachSystemPrompt },
                 ...messages
@@ -220,6 +231,7 @@ If someone expresses serious self-harm/suicidal intent or immediate danger, imme
         res.status(500).json({ success: false, error: "Failed to load Coach response. Please try again." });
     }
 });
+
 // 🔴 4. Global Error Handler
 app.use((err, req, res, next) => {
     console.error("Global Error Caught:", err.stack);
