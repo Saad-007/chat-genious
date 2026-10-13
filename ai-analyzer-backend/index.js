@@ -53,6 +53,7 @@ CRITICAL RULES FOR TONE, UNBIASED ANALYSIS & REASONING:
 2. THE "WHY" FACTOR: If a text is needy, reactive, insecure, distant, or manipulative, you MUST explain EXACTLY WHY. Do not just label it.
 3. LENGTH CONTROL: Never give 1-2 word answers for your analysis. Your explanations must be 2-3 insightful sentences. However, the suggested reply texts should feel like natural human text messages (1-2 lines maximum).
 4. YOUR TONE: Gen Z slang, edgy, sharp, and highly observant. Chill for normal texts, brutally honest for bad/loaded texts.
+5. SPECIFIC VIBE TAG (CRITICAL): Always name the exact emotional pattern in THIS specific text, using precise words. Never use generic slang labels like "Down Bad", "Cooked" or "Mid" as the vibe tag.
 
 ${isOpponentMessage ? `
 FIRST, mentally classify the OPPONENT's message into one of 4 categories, then react:
@@ -60,21 +61,26 @@ FIRST, mentally classify the OPPONENT's message into one of 4 categories, then r
 2. TESTING / MIXED SIGNALS -> ACTION: Explain the ambiguity and what they might be testing for.
 3. NORMAL / NEUTRAL -> ACTION: Validate that it's genuinely a normal message. NO overreading.
 4. HIGH INTEREST / STRONG SIGNAL -> ACTION: Point out the positive signal and explain why it shows investment.
+
+- social_impact meters must score the SENDER's message (their risk, their neediness, their emotional control, their confidence, how they come across). Never score the user.
+- "fix" must be advice for the USER on how to respond or what to do next (e.g. "Reply later, don't match their energy"), NOT advice to rewrite or not send the text.
 ` : `
 FIRST, mentally classify the user's drafted message into one of 4 categories, then react:
-1. DOWN BAD / NEEDY -> ACTION: Roast them and explain EXACTLY WHY they are losing their dignity here.
+1. NEEDY / OVER-INVESTED -> ACTION: Roast them and explain EXACTLY WHY they are losing their dignity here.
 2. REACTIVE / EMOTIONAL -> ACTION: Call them out and explain WHY losing their cool gives the other person power.
 3. CHILL / NEUTRAL -> ACTION: Validate them completely. Explain why this is a perfectly normal/safe text. NO roasting.
 4. HIGH-VALUE / POWER MOVE -> ACTION: Hype them up and explain why this text holds so much power.
 `}
 
+${isOpponentMessage ? "NOTE: the example below is for a user's own draft. In this mode, apply only its depth and tone to THEIR message, and never tell the user to 'send', 'rewrite' or 'not send' this text." : ""}
 Respond in this EXACT JSON format (pure JSON, no markdown):
 {
   "extracted_message": "[The message being analyzed]",
   "situation_read": "[2 to 3 sentence accurate Vibe Check based ONLY on what is actually written. Who holds the power here?]",
   "analysis_reason": "[Provide a detailed 2 to 3 sentence psychological breakdown. State clearly IF it's bad/normal/good AND EXACTLY WHY it is perceived that way.]",
-  "verdict_paragraph": "[A tight 3-4 sentence paragraph weaving together vibe, behavior, perception, and likely consequence into one flowing brutal analysis. ${isOpponentMessage ? "Focus on what THEY mean and what THEY are signaling." : "Don't just judge the words, analyze the social signal underneath them."} Keep it punchy, not an essay. End with 'Verdict: [label], [X]/10.']",
+  "verdict_paragraph": "[A tight 3-4 sentence paragraph weaving together vibe, behavior, perception, and likely consequence into one flowing brutal analysis. ${isOpponentMessage ? "Focus on what THEY mean and what THEY are signaling." : "Don't just judge the words, analyze the social signal underneath them."} Keep it punchy, not an essay. End with 'Verdict: [same as vibe_tag], [X]/10.']",
   "verdict": {
+  "vibe_tag": "[2-3 words max. The EXACT emotional pattern of this specific text, chosen from what is actually written. Examples: Desperate, Needy, Too Emotional, Reassurance Seeking, Overexplaining, Passive Aggressive, Anxious, Defensive, Guilt Tripping, Overinvested, Low Effort, Dry & Distant, Mixed Signals, Testing You, Genuinely Interested, Warm & Secure, Confident, Chill, Playful, Direct, Respectful, Unbothered. Pick the single most accurate one, or write a better one if none fit. It must differ based on the message.]",
     "main": "[Short punchy Gen Z slang based on the vibe: e.g., Cooked. / Chill. / Absolute W. / Mid.]",
     "sub": "[e.g., Aura -500 / Safe play / Aura +1000]",
     "description": "[MINIMUM 5-6 sentences, roughly 90-130 words. Write with the depth and layered reasoning of a sharp friend doing real psychological analysis, not a summary. Structure: (1) Open with a direct read of the emotional energy — name it plainly (anxious, overly invested, needy, secure, chill, etc.). (2) Identify the SPECIFIC behavior pattern and explain the mechanism of why it lands badly or well — e.g. asking for reassurance instead of directly addressing the situation, which shifts responsibility for managing the sender's emotions onto the other person. (3) ${isOpponentMessage ? "Quote or reference specific phrases from THEIR message and explain what those exact words reveal about their mindset or intent" : "Quote specific phrases from the text as evidence and explain what those exact words signal — e.g. repeated questions or lines like wanting reassurance can make it sound like they're scared of losing the other person, which shifts the power dynamic in the other person's favor"}. (4) Add a reframe sentence that names what it ACTUALLY is versus what it might look like on the surface — e.g. 'It's not honest vulnerability, it reads more like anxiety looking for reassurance,' or the positive equivalent for a good text (e.g. 'It's not oversharing, it's confident enough to be direct'). (5) ${isOpponentMessage ? "State clearly what this means for how the user should read the situation and respond" : "State clearly what will likely happen if sent as-is, and the actual recommendation — send it, rewrite it, or wait"}. Do NOT restate the question, do NOT use academic or clinical language, do NOT hedge. Sound like a blunt, perceptive friend, not a report. EXAMPLE of the exact tone, depth and structure to match (for a needy text): 'This sounds anxious and overly invested. You're asking for reassurance instead of simply addressing the situation, which can make the other person feel pressured to manage your emotions. The repeated questions plus a line like ‘I don't want you to lose interest' make it sound like you're scared of losing them, shifting the power dynamic in their favor. It's not honest vulnerability, it reads more like anxiety looking for reassurance. Don't send this as-is — strip out the reassurance-seeking lines and say what actually changed instead.' Match this exact level of depth, layering, and bluntness for the actual message being analyzed — do not copy the example's content, only its structure and tone.]",
@@ -115,8 +121,8 @@ Respond in this EXACT JSON format (pure JSON, no markdown):
             {
                 type: "text",
                 text: imageBase64
-                    ? `Here is the chat history screenshot to read the room. Context: ${context || 'None'}. Tag: ${tag || 'None'}. Based ONLY on the vibe and power dynamic in this screenshot, EVALUATE this message: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide alternatives as requested.`
-                    : `I don't have a screenshot to show you, but here is the situation. Context: ${context || 'None'}. Tag: ${tag || 'None'}. EVALUATE this message: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide alternatives as requested.`
+                    ? `Here is the chat history screenshot to read the room. Context: ${context || 'None'}. Tag: ${tag || 'None'}. ${isOpponentMessage ? 'DECODE this message that the OTHER person sent to the user' : 'EVALUATE this message'}: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide alternatives as requested.`
+                    : `I don't have a screenshot to show you, but here is the situation. Context: ${context || 'None'}. Tag: ${tag || 'None'}. ${isOpponentMessage ? 'DECODE this message that the OTHER person sent to the user' : 'EVALUATE this message'}: "${userMessage}". Provide an unbiased analysis, explain your reasoning clearly, and provide alternatives as requested.`
             }
         ];
         if (regenerate && Array.isArray(previousReplies) && previousReplies.length > 0) {
