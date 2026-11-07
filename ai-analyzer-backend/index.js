@@ -5,10 +5,21 @@ const { OpenAI } = require('openai');
 
 const app = express();
 
-// 🔴 1. CORS aur Body Parser Setup
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// 🔴 KILL SWITCH: Render env var se control hota hai
+app.use('/api', (req, res, next) => {
+    if (process.env.SERVICE_DISABLED === 'true') {
+        return res.status(403).json({
+            success: false,
+            error: "Service is currently unavailable. Please contact the app owner or reach out via the App Store review.",
+            reply: "Service is currently unavailable. Please contact the app owner or reach out via the App Store review."
+        });
+    }
+    next();
+});
 
 // 🔴 2. OpenAI Setup 
 const openai = new OpenAI({
@@ -19,7 +30,6 @@ const openai = new OpenAI({
 app.get('/', (req, res) => {
     res.status(200).send("Social Genius AI Backend is Live on Render! 🚀");
 });
-
 // 🔴 Main AI Analysis Route
 app.post('/api/analyze-chat', async (req, res) => {
     try {
@@ -239,3 +249,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server is successfully running on port ${PORT}`);
 });
+
